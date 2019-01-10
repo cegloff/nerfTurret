@@ -13,8 +13,11 @@ from math import floor
 import serial
 import time
 debug = False
-ser = serial.Serial('COM3', 57600)
-
+try:
+	ser = serial.Serial('COM3', 57600)
+except Exception as e:
+	print ("Could not connect to com port.  Continuing with image detection only.")
+	ser = None
 
 def sendCommand(targetPoint):
 	response = ''
@@ -34,20 +37,26 @@ def sendCommand(targetPoint):
 		if debug: 
 			print(direction)
 	command = '1' + direction + '0'
-	ser.flushOutput()
-	ser.write((command + '\r').encode())
-	response = ser.read()
-	if debug:
-		while response != b'\r':
-			fullResponse = fullResponse + response.decode("utf-8")
+	if ser:
+		ser.flushOutput()
+		ser.write((command + '\r').encode())
+		
+		if debug:
 			response = ser.read()
-			# response = ser.read()
-			if (response == b'\r'):
-				print (fullResponse) 
-				fullResponse = ''
+			while response != b'\r':
+				fullResponse = fullResponse + response.decode("utf-8")
+				response = ser.read()
+				# response = ser.read()
+				if (response == b'\r'):
+					print (fullResponse) 
+					fullResponse = ''
 
 def powerDown():
-	ser.write(('00000' + '\r').encode())
+	print ("resetting Arduino")
+	if ser:
+		ser.flushOutput()
+		ser.write(('00000' + '\r').encode())
+		ser.flushInput()
 # construct the argument parse and parse the arguments
 # ap = argparse.ArgumentParser()
 # ap.add_argument("-i", "--images", required=True, help="path to images directory")
@@ -77,8 +86,8 @@ while(True):
 	# orig = image.copy()
 
 	# detect people in the image
-	(rects, weights) = hog.detectMultiScale(image, winStride=(4, 4),
-		padding=(8, 8), scale=1.05)
+	(rects, weights) = hog.detectMultiScale(gray, winStride=(2, 2),
+		padding=(4, 4), scale=1.5)
 
 	# draw the original bounding boxes
 	# for (x, y, w, h) in rects:
@@ -96,12 +105,13 @@ while(True):
 		if debug:
 			print(xA, xB)
 		midpoint = xA + ((xB - xA) / 2) 
-		targetPoint = floor((midpoint / 400) * 120)
+		targetPoint = floor(((midpoint / 480) * 55) + 70)
 		current_time = time.time() 
-		if (current_time - .3) >  var_ticks:
+		if (current_time - .1) >  var_ticks:
 			if debug: 
 				print(xA, xB, midpoint, targetPoint)
 			sendCommand(targetPoint)
+			var_ticks = current_time
 
 	# show some information on the number of bounding boxes
 	# filename = imagePath[imagePath.rfind("/") + 1:]
@@ -114,6 +124,8 @@ while(True):
 	# cv2.waitKey(0)
 	if cv2.waitKey(20) & 0xff == ord('q'):
 		break
+	if ser:
+		ser.flushInput()
 powerDown()
 cap.release()
 cv2.destroyAllWindows()

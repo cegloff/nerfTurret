@@ -12,6 +12,7 @@ int currentByte = 9999;
 String tempAngle = "000";
 int homeAngle = 70;
 int motorInitialized = 0;
+float lastTime = millis()
 
 void setup()   {
     Serial.begin(57600);
