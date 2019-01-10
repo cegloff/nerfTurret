@@ -14,7 +14,7 @@ int homeAngle = 70;
 int motorInitialized = 0;
 
 void setup()   {
-    Serial.begin(9600);
+    Serial.begin(57600);
     pinMode(pwrPin, OUTPUT);
     fireServo.attach(fireServoPin);   
     fireServo.write(homeAngle);   // Rotate servo to ready to fire
@@ -40,21 +40,23 @@ void loop() {
         // read the incoming byte:
         incomingByte = Serial.read();
         // say what you got:
+        Serial.write(incomingByte);
         currentByte = incomingByte;    
     }
     
-    if (currentByte != 9999 && currentByte != 13 && position < 5){
+    if (currentByte != 9999 && currentByte != '\r' && position < 5){
         command[position]=char(incomingByte);
         position++;
         currentByte= 9999;
     }
     else {
-        if (currentByte == 13){
+        if (currentByte == '\r'){
             position = 0;
             Serial.print("I received: ");
             Serial.println(command);
             runCommand();
             resetCommand();
+            
         }
     }
 }
@@ -63,9 +65,11 @@ void runCommand() {
     // Serial.println(command[0]);
     if (command[0] == '0'){
         motorOff();
+//        Serial.println('Motor Off');
     }
     if (command[0] == '1'){
         motorOn();
+//        Serial.println('Motor On');
     }
     if (int(command[1]) > 0 || int(command[2]) > 0|| int(command[3]) > 0) {
         tempAngle[0] = command[1];
@@ -76,7 +80,7 @@ void runCommand() {
             angle = homeAngle;
         }
         aimServo.write(angle);
-        delay(1000);
+        // delay(1000);
     }
     if (command[4] == '1'){
         if (command[0] == '1'){
@@ -97,6 +101,9 @@ void resetCommand() {
     // command[2] = '9';
     // command[3] = '9';
     // command[0] = '0';
+    Serial.end();
+    Serial.begin(57600);
+
 }
 
 void motorOn() {
@@ -114,9 +121,9 @@ void motorOff() {
 
 void fire() {
     fireServo.write(10);
-    delay(700);
+    // delay(500);
     fireServo.write(70);
-    delay(500);
+    // delay(500);
 }
 
 void burst() {
